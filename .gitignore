@@ -6,3 +6,4 @@ yarn.lock
 exo*.js
 helloworld.js
 .idea/*
+/build

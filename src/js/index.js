@@ -1,58 +1,84 @@
 import * as THREE from 'three';
 
+/* CAMERA */
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
-camera.position.z = 1000;
+camera.position.z = 0;
 
-const geometry = new THREE.BoxGeometry(200, 200, 200);
-const material = new THREE.MeshBasicMaterial({
-    color: 0xff0000,
-    wireframe: true
-});
+/* RESIZE*/
 
-const mesh = new THREE.Mesh(geometry, material);
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth / window.innerHeight);
+}, false);
 
-const scene = new THREE.Scene();
+/* MESH */
+
+let geometry = new THREE.BoxGeometry(200, 200, 200);
+let material = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+let mesh = new THREE.Mesh(geometry, material);
+mesh.position.x = 400;
+
+/* Child */
+
+let child = new THREE.Mesh(new THREE.BoxGeometry(200, 200, 200), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+child.position.x = 0;
+
+/* Créer la SCENE */
+let scene = new THREE.Scene();
 scene.add(mesh);
+mesh.add(child);
 
-const renderer = new THREE.WebGLRenderer();
+/* RENDER */
+let renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-
 document.body.appendChild(renderer.domElement);
 
+
+/* Afficher la SCENE et animer le cube */
 function animate() {
     requestAnimationFrame(animate);
-
     renderer.render(scene, camera);
 }
-animate();
 
-document.body.onkeydown = (event) => {
-    const speed = 16;
-
-    switch (event.keyCode){
-        case 37:
-            mesh.rotation.y += Math.PI / speed;
-            mesh.scale.y += 0.02;
+document.onkeydown = function (e) {
+    switch (e.key) {
+        case 'ArrowUp':
+            mesh.rotation.x += 0.3;
             break;
-        case 38:
-            mesh.rotation.x -= Math.PI / speed;
+        case 'ArrowDown':
+            mesh.rotation.x -= 0.3;
             break;
-        case 39:
-            mesh.rotation.y -= Math.PI / speed;
-            mesh.scale.y += 0.02;
+        case 'ArrowLeft':
+            mesh.rotation.y -= 0.3;
             break;
-        case 40:
-            mesh.rotation.x += Math.PI / speed;
-            break;
+        case 'ArrowRight':
+            mesh.rotation.y += 0.3;
     }
 };
+//Mouse orientation
+let fpsObject = new THREE.Object3D();
+scene.add(fpsObject);
+let pitchObject = new THREE.Object3D();
+pitchObject.add(camera);
 
-document.body.onkeyup = (event) => {
-    if(event.keyCode === 37 || event.keyCode === 39){
-        mesh.scale.y = 1;
-    }
-};
+let yawObject = new THREE.Object3D();
+//yawObject.position.y = 10;
+yawObject.add(pitchObject);
+fpsObject.add(yawObject);
 
+document.addEventListener('mousemove', function (event) {
+    const movementX = event.movementX;
+    const movementY = event.movementY;
+
+    yawObject.rotation.y -= movementX * 0.002;
+    pitchObject.rotation.x -= movementY * 0.002;
+
+    pitchObject.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObject.rotation.x));
+}, false);
+
+/*
 let mouseEnabled = false;
 document.body.onmousedown = () => {
     mouseEnabled = true;
@@ -63,10 +89,12 @@ document.body.onmouseup = () => {
 };
 
 document.body.onmousemove = (event) => {
-    if(!mouseEnabled){
-        return false;
+    if (!mouseEnabled) {
+        camera.rotation.y +=  event.movementX / 1000;
+        camera.rotation.x +=event.movementY / 1000;
     }
-
-    mesh.rotation.y += event.movementX / 100;
-    mesh.rotation.x += event.movementY / 100;
+    return false;
 };
+*/
+animate();
+
