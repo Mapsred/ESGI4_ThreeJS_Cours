@@ -1,3 +1,9 @@
+/**************************************************/
+/* exo déplacement FPS                            */
+/**************************************************/
+console.log('exo FPS');
+
+
 // styles
 import '../scss/index.scss';
 
@@ -5,14 +11,30 @@ import '../scss/index.scss';
 import * as THREE from 'three';
 import 'three/examples/js/controls/PointerLockControls';
 
-let camera, scene, renderer, geometry, material, mesh, controls;
+
+let camera, scene, renderer, geometry, material, mesh;
+let controls;
+
+
+const keys = [];
+document.onkeydown = function (e) {
+    e = e || window.event;
+    keys[e.keyCode] = true;
+};
+
+document.onkeyup = function (e) {
+    e = e || window.event;
+    keys[e.keyCode] = false;
+};
+
 
 function init() {
-    const element = document.body;
     scene = new THREE.Scene();
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+    // camera
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
 
+    // cubes floor
     for (let x = 0; x < 30; x++) {
         for (let y = 0; y < 30; y++) {
             const geometry = new THREE.BoxGeometry(2, 2, 2);
@@ -26,29 +48,21 @@ function init() {
 
             scene.add(mesh);
         }
-
     }
 
-    camera.position.z = 1000;
-
-    geometry = new THREE.BoxGeometry(200, 200, 200);
-    material = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-        wireframe: true
-    });
-
-    mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
+    // renderer
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.body.appendChild(renderer.domElement);
 
+    // mouse view controls
     controls = new THREE.PointerLockControls(camera);
     scene.add(controls.getObject());
 
     // pointer lock
+    const element = document.body;
+
     const pointerlockchange = function (event) {
         controls.enabled = document.pointerLockElement === element;
     };
@@ -63,7 +77,6 @@ function init() {
         element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
         element.requestPointerLock();
     }, false);
-
 }
 
 const clock = new THREE.Clock();
@@ -71,47 +84,29 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
 
-    const delta = clock.getDelta();
+    let delta = clock.getDelta();
+    const speed = 10;
 
-    // mesh.rotation.x += 0.5 * delta;
-    // mesh.rotation.y += 0.7 * delta;
+    // up
+    if (keys[38]) {
+        controls.getObject().translateZ(-delta * speed);
+    }
+    // down
+    if (keys[40]) {
+        controls.getObject().translateZ(delta * speed);
+    }
+    // left
+    if (keys[37]) {
+        controls.getObject().translateX(-delta * speed);
+    }
+    // right
+    if (keys[39]) {
+        controls.getObject().translateX(delta * speed);
+    }
 
-    document.onkeydown = function (e) {
-        e = e || window.event;
-
-        switch (e.keyCode) {
-            case 32:
-                // switchCamera();
-                break;
-            // left
-            case 37:
-                mesh.rotation.y -= 0.02;
-                console.log(mesh.rotation.y);
-                return;
-            // right
-            case 39:
-                mesh.rotation.y += 0.02;
-                return;
-            // top
-            case 38:
-                mesh.rotation.x -= 0.02;
-                return;
-            // down
-            case 40:
-                mesh.rotation.x += 0.02;
-                return;
-        }
-    };
 
     renderer.render(scene, camera);
 }
-
-// window resize
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}, false);
 
 init();
 animate();
