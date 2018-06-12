@@ -1,172 +1,173 @@
-/**************************************************/
-/* exo déplacement FPS                            */
-/**************************************************/
-console.log('exo FPS');
-
-
 // styles
 import '../scss/index.scss';
 
 // three.js
 import * as THREE from 'three';
-import 'three/examples/js/controls/PointerLockControls';
+import 'three/examples/js/controls/FirstPersonControls';
+import 'three/examples/js/BufferGeometryUtils';
+import ImprovedNoise from './three_more/ImprovedNoise';
+import * as Detector from 'three/examples/js/Detector';
+import Stats from 'three/examples/js/libs/stats.min';
 
-const sunTexture = require('../img/sun_texture.jpg');
-const earthTexture = require('../img/earth_texture.jpg');
-const moonTexture = require('../img/moon_texture.jpg');
-
-
-let camera, scene, renderer, geometry, material, mesh;
-let controls;
-
-
-const keys = [];
-document.onkeydown = function (e) {
-    e = e || window.event;
-    keys[e.keyCode] = true;
-};
-
-document.onkeyup = function (e) {
-    e = e || window.event;
-    keys[e.keyCode] = false;
-};
-
-
-const sunPivot = new THREE.Object3D();
-const earthPivot = new THREE.Object3D();
-const moonPivot = new THREE.Object3D();
-
-function init() {
-    scene = new THREE.Scene();
-
-    // camera
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.z = 400;
-
-    // cubes floor
-    // for (let x = 0; x < 30; x++) {
-    //     for (let y = 0; y < 30; y++) {
-    //         const geometry = new THREE.BoxGeometry(2, 2, 2);
-    //         const material = new THREE.MeshBasicMaterial({
-    //             color: Math.floor(Math.random() * 16777215)
-    //         });
-    //         const mesh = new THREE.Mesh(geometry, material);
-    //         mesh.position.x -= x * 2;
-    //         mesh.position.z -= y * 2;
-    //         mesh.position.y = -2;
-    //
-    //         scene.add(mesh);
-    //     }
-    // }
-
-    const light = new THREE.AmbientLight(0x888888);
-    scene.add(light);
-    const directionalLight = new THREE.DirectionalLight(0xfdfcf0, 1);
-    directionalLight.position.set(10, 10, 10);
-    scene.add(directionalLight);
-
-    scene.add(sunPivot);
-
-    /* START MESH */
-
-    /* SUN */
-
-    const sun = new THREE.Mesh(new THREE.SphereGeometry(32, 32, 32), new THREE.MeshPhongMaterial({
-        map: new THREE.ImageUtils.loadTexture(sunTexture),
-        color: 0xf2e8b7,
-        emissive: 0x91917b,
-        specular: 0x777d4a,
-        shininess: 62,
-        envMaps: "refraction"
-    }));
-
-    sunPivot.add(earthPivot);
-    sunPivot.add(sun);
-
-    /* EARTH */
-
-    const earth = new THREE.Mesh(new THREE.SphereGeometry(16, 32, 32), new THREE.MeshPhongMaterial({
-        map: new THREE.ImageUtils.loadTexture(earthTexture),
-        color: 0xaaaaaa,
-        specular: 0x333333,
-        shininess: 25
-    }));
-
-    earth.position.y = 100;
-
-    earthPivot.add(earth);
-    earth.add(moonPivot);
-
-    /* MOON */
-
-    const moon = new THREE.Mesh(new THREE.SphereGeometry(8, 32, 32), new THREE.MeshPhongMaterial({
-        map: THREE.ImageUtils.loadTexture(moonTexture)
-    }));
-
-    moon.position.y = 30;
-    moonPivot.add(moon);
-
-    /* END MESH */
-
-    // renderer
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    document.body.appendChild(renderer.domElement);
-
-    // mouse view controls
-    controls = new THREE.PointerLockControls(camera);
-    scene.add(controls.getObject());
-
-    // pointer lock
-    const element = document.body;
-
-    const pointerlockchange = function (event) {
-        controls.enabled = document.pointerLockElement === element;
-    };
-    const pointerlockerror = function (event) {
-    };
-
-    // hook pointer lock state change events
-    document.addEventListener('pointerlockchange', pointerlockchange, false);
-    document.addEventListener('pointerlockerror', pointerlockerror, false);
-
-    element.addEventListener('click', function () {
-        element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
-        element.requestPointerLock();
-    }, false);
+if (!Detector.webgl) {
+    Detector.addGetWebGLMessage();
+    document.getElementById('container').innerHTML = "";
 }
 
+let container, stats;
+let camera, controls, scene, renderer;
+let mesh;
+
+const worldWidth = 128, worldDepth = 128;
+const worldHalfWidth = worldWidth / 2;
+const worldHalfDepth = worldDepth / 2;
+const data = generateHeight(worldWidth, worldDepth);
 const clock = new THREE.Clock();
-
-function animate() {
-    requestAnimationFrame(animate);
-
-    let delta = clock.getDelta();
-    const speed = 10;
-    earthPivot.rotation.z += 0.01;
-    moonPivot.rotation.z += 0.01;
-
-    // up
-    if (keys[38]) {
-        controls.getObject().translateZ(-delta * speed);
-    }
-    // down
-    if (keys[40]) {
-        controls.getObject().translateZ(delta * speed);
-    }
-    // left
-    if (keys[37]) {
-        controls.getObject().translateX(-delta * speed);
-    }
-    // right
-    if (keys[39]) {
-        controls.getObject().translateX(delta * speed);
-    }
-
-
-    renderer.render(scene, camera);
-}
 
 init();
 animate();
+
+function init() {
+    container = document.getElementById('container');
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 20000);
+    camera.position.y = getY(worldHalfWidth, worldHalfDepth) * 100 + 100;
+    controls = new THREE.FirstPersonControls(camera);
+    controls.movementSpeed = 1000;
+    controls.lookSpeed = 0.125;
+    controls.lookVertical = true;
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xbfd1e5);
+    // sides
+
+    const matrix = new THREE.Matrix4();
+
+    const pxGeometry = new THREE.PlaneBufferGeometry(100, 100);
+    pxGeometry.attributes.uv.array[1] = 0.5;
+    pxGeometry.attributes.uv.array[3] = 0.5;
+    pxGeometry.rotateY(Math.PI / 2);
+    pxGeometry.translate(50, 0, 0);
+
+    const nxGeometry = new THREE.PlaneBufferGeometry(100, 100);
+    nxGeometry.attributes.uv.array[1] = 0.5;
+    nxGeometry.attributes.uv.array[3] = 0.5;
+    nxGeometry.rotateY(-Math.PI / 2);
+    nxGeometry.translate(-50, 0, 0);
+
+    const pyGeometry = new THREE.PlaneBufferGeometry(100, 100);
+    pyGeometry.attributes.uv.array[5] = 0.5;
+    pyGeometry.attributes.uv.array[7] = 0.5;
+    pyGeometry.rotateX(-Math.PI / 2);
+    pyGeometry.translate(0, 50, 0);
+
+    const pzGeometry = new THREE.PlaneBufferGeometry(100, 100);
+    pzGeometry.attributes.uv.array[1] = 0.5;
+    pzGeometry.attributes.uv.array[3] = 0.5;
+    pzGeometry.translate(0, 0, 50);
+
+    const nzGeometry = new THREE.PlaneBufferGeometry(100, 100);
+    nzGeometry.attributes.uv.array[1] = 0.5;
+    nzGeometry.attributes.uv.array[3] = 0.5;
+    nzGeometry.rotateY(Math.PI);
+    nzGeometry.translate(0, 0, -50);
+
+    //
+    const geometries = [];
+    for (let z = 0; z < worldDepth; z++) {
+        for (let x = 0; x < worldWidth; x++) {
+            const h = getY(x, z);
+            matrix.makeTranslation(x * 100 - worldHalfWidth * 100, h * 100, z * 100 - worldHalfDepth * 100);
+            const px = getY(x + 1, z);
+            const nx = getY(x - 1, z);
+            const pz = getY(x, z + 1);
+            const nz = getY(x, z - 1);
+
+            geometries.push(pyGeometry.clone().applyMatrix(matrix));
+
+            if ((px !== h && px !== h + 1) || x === 0) {
+                geometries.push(pxGeometry.clone().applyMatrix(matrix));
+            }
+
+            if ((nx !== h && nx !== h + 1) || x === worldWidth - 1) {
+                geometries.push(nxGeometry.clone().applyMatrix(matrix));
+            }
+
+            if ((pz !== h && pz !== h + 1) || z === worldDepth - 1) {
+                geometries.push(pzGeometry.clone().applyMatrix(matrix));
+            }
+
+            if ((nz !== h && nz !== h + 1) || z === 0) {
+                geometries.push(nzGeometry.clone().applyMatrix(matrix));
+            }
+        }
+    }
+
+    const geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geometries);
+    geometry.computeBoundingSphere();
+
+    const texture = new THREE.TextureLoader().load('textures/minecraft/atlas.png');
+    texture.magFilter = THREE.NearestFilter;
+
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({map: texture}));
+    scene.add(mesh);
+
+    const ambientLight = new THREE.AmbientLight(0xcccccc);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+    directionalLight.position.set(1, 1, 0.5).normalize();
+
+    scene.add(directionalLight);
+
+    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    container.innerHTML = "";
+    container.appendChild(renderer.domElement);
+
+    stats = new Stats();
+
+    container.appendChild(stats.dom);
+    //
+    window.addEventListener('resize', onWindowResize, false);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    controls.handleResize();
+}
+
+function generateHeight(width, height) {
+    const data = [], perlin = new ImprovedNoise(),
+        size = width * height;
+    let quality = 2;
+    const z = Math.random() * 100;
+    for (let j = 0; j < 4; j++) {
+        if (j === 0) for (var i = 0; i < size; i++) data[i] = 0;
+        for (var i = 0; i < size; i++) {
+            const x = i % width, y = (i / width) | 0;
+            data[i] += perlin.noise(x / quality, y / quality, z) * quality;
+        }
+        quality *= 4;
+    }
+    return data;
+}
+
+function getY(x, z) {
+    return (data[x + z * worldWidth] * 0.2) | 0;
+}
+
+//
+function animate() {
+    requestAnimationFrame(animate);
+    render();
+    stats.update();
+}
+
+function render() {
+    controls.update(clock.getDelta());
+    renderer.render(scene, camera);
+}
+
